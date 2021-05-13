@@ -54,19 +54,50 @@ d = exploded
 #the transformation should correspond to the angle value that corresponds that face to it... 
 #the result should be a mesh that responds to the sun position... its up to you!
 
-""" Not completed
+1.remap angleList
+remaped=[]
+for i in angleList:
+    remaped_value=(((i - min(angleList)) * (max_off - min_off)) / (max(angleList) - min(angleList))) + min_off
+    remaped.append(remaped_value)
+#2. Get the Faces outlines
+outlines=[]
+for i in exploded:
+    outline=rg.Mesh.GetNakedEdges(i)
+    outlines.append(outline)
 
-Questions : 
-- Extract edges from a mesh/surface?
-- Define plane by mesh orientation?
+
+# join outlines
+joined_outlines=[]
+for i in outlines:
+    curves=[]
+    for j in i:
+        curve=rg.Polyline.ToNurbsCurve(j)
+        curves.append(curve)
+    joined=rg.Curve.JoinCurves(curves)[0]
+    joined_outlines.append(joined)
+# Offset outlines
+mesh_points=[]
+for i in exploded:
+    points=rg.Mesh.Vertices.GetValue(i)
+    mesh_points.append(points)
+mesh_points_3d=[]
+for i in mesh_points:
+    sub=[]
+    for j in i:
+        pt=rg.Point3d(j)
+        sub.append(pt)
+    mesh_points_3d.append(sub)
 
 
-meshSquares = []
-
-for i in range (len(face_centers)):
-    squares = rg
-    meshSquares.append(squares)
+offset_outlines=[]
+for i in range(len(joined_outlines)):
+    surface=rg.NurbsSurface.CreateFromPoints(mesh_points_3d[i],2,2,2,2)
+    off=rg.Curve.OffsetOnSurface(joined_outlines[i],surface,remaped[i],.001)[0]
+    offset_outlines.append(off)
     
-e = meshSquares
-    
-"""
+# Loft 
+lofted_breps=[]
+for i in range(len(offset_outlines)):
+    list_curves=[offset_outlines[i],joined_outlines[i]]
+    lofted=rg.Brep.CreateFromLoft(list_curves,rg.Point3d.Unset,rg.Point3d.Unset,rg.LoftType.Normal,False)[0]
+    lofted_breps.append(lofted)
